@@ -1,0 +1,5 @@
+{
+  "name": "Zen Sudoku",
+  "description": "A beautiful, single-player Sudoku game with notes, keyboard navigation, and unlimited mistakes for a relaxed experience.",
+  "requestFramePermissions": []
+}
