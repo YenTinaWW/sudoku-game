@@ -13,7 +13,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { generatePuzzle, Grid, DIFFICULTY_LEVELS, isBoardComplete } from '@/src/lib/sudoku';
+import { generatePuzzle, Grid, isBoardComplete } from '@/src/lib/sudoku';
 
 type CellPos = { row: number; col: number } | null;
 type NoteGrid = Set<number>[][];
@@ -25,14 +25,13 @@ const SudokuBoard: React.FC = () => {
   const [notes, setNotes] = useState<NoteGrid>([]);
   const [selected, setSelected] = useState<CellPos>(null);
   const [isNoteMode, setIsNoteMode] = useState(false);
-  const [difficulty, setDifficulty] = useState<keyof typeof DIFFICULTY_LEVELS>('MEDIUM');
   const [isComplete, setIsComplete] = useState(false);
   const [mistakes, setMistakes] = useState(0);
   const [history, setHistory] = useState<{ grid: Grid; notes: NoteGrid; mistakes: number }[]>([]);
 
   // Initialize game
-  const startNewGame = useCallback((level: keyof typeof DIFFICULTY_LEVELS = difficulty) => {
-    const { puzzle: p, solution: s } = generatePuzzle(DIFFICULTY_LEVELS[level]);
+  const startNewGame = useCallback(() => {
+    const { puzzle: p, solution: s } = generatePuzzle();
     setPuzzle(p);
     setSolution(s);
     setCurrentGrid(p.map(row => [...row]));
@@ -41,7 +40,7 @@ const SudokuBoard: React.FC = () => {
     setIsComplete(false);
     setMistakes(0);
     setHistory([]);
-  }, [difficulty]);
+  }, []);
 
   useEffect(() => {
     startNewGame();
@@ -179,22 +178,6 @@ const SudokuBoard: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Zen Sudoku</h1>
             <div className="flex items-center gap-4 mt-1">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Difficulty</span>
-                <select 
-                  value={difficulty}
-                  onChange={(e) => {
-                    const val = e.target.value as keyof typeof DIFFICULTY_LEVELS;
-                    setDifficulty(val);
-                    startNewGame(val);
-                  }}
-                  className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full border-none focus:ring-2 focus:ring-indigo-500 cursor-pointer outline-none"
-                >
-                  {Object.keys(DIFFICULTY_LEVELS).map(level => (
-                    <option key={level} value={level}>{level}</option>
-                  ))}
-                </select>
-              </div>
               <div className="flex items-center gap-1">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Mistakes:</span>
                 <span className="text-xs font-bold text-rose-500">{mistakes}/3</span>
@@ -322,7 +305,7 @@ const SudokuBoard: React.FC = () => {
                 <Trophy size={40} />
               </div>
               <h2 className="text-3xl font-bold text-slate-900 mb-2">Well Done!</h2>
-              <p className="text-slate-500 mb-8">You've successfully completed the {difficulty} puzzle.</p>
+              <p className="text-slate-500 mb-8">You've successfully completed the puzzle.</p>
               <button
                 onClick={() => startNewGame()}
                 className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg hover:bg-indigo-700 active:scale-95 transition-all shadow-lg shadow-indigo-200"

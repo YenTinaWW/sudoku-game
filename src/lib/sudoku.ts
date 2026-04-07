@@ -1,11 +1,6 @@
 export type Grid = (number | null)[][];
 
-export const DIFFICULTY_LEVELS = {
-  EASY: 36,
-  MEDIUM: 30,
-  HARD: 24,
-  EXPERT: 18,
-};
+
 
 export function generateEmptyGrid(): Grid {
   return Array.from({ length: 9 }, () => Array(9).fill(null));
@@ -53,19 +48,60 @@ function solve(grid: Grid): boolean {
   return true;
 }
 
-export function generatePuzzle(clues: number = DIFFICULTY_LEVELS.MEDIUM): { puzzle: Grid; solution: Grid } {
+function countSolutions(grid: Grid): number {
+  let count = 0;
+
+  function countHelper(): void {
+    if (count > 1) return;
+
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        if (grid[row][col] === null) {
+          for (let num = 1; num <= 9; num++) {
+            if (isValid(grid, row, col, num)) {
+              grid[row][col] = num;
+              countHelper();
+              grid[row][col] = null;
+              if (count > 1) return;
+            }
+          }
+          return;
+        }
+      }
+    }
+    count++;
+  }
+
+  countHelper();
+  return count;
+}
+
+export function generatePuzzle(): { puzzle: Grid; solution: Grid } {
   const solution: Grid = generateEmptyGrid();
   solve(solution);
 
   const puzzle: Grid = solution.map((row) => [...row]);
-  let attempts = 81 - clues;
+  
+  const cells: {r: number, c: number}[] = [];
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      cells.push({r, c});
+    }
+  }
+  cells.sort(() => Math.random() - 0.5);
 
-  while (attempts > 0) {
-    const row = Math.floor(Math.random() * 9);
-    const col = Math.floor(Math.random() * 9);
-    if (puzzle[row][col] !== null) {
-      puzzle[row][col] = null;
-      attempts--;
+  let removedCount = 0;
+  
+  for (const cell of cells) {
+    if (removedCount >= 20) break;
+
+    const temp = puzzle[cell.r][cell.c];
+    puzzle[cell.r][cell.c] = null;
+
+    if (countSolutions(puzzle) === 1) {
+      removedCount++;
+    } else {
+      puzzle[cell.r][cell.c] = temp;
     }
   }
 
