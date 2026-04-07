@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  RotateCcw, 
-  Pencil, 
-  Eraser, 
-  Trophy, 
-  Settings, 
+import {
+  RotateCcw,
+  Pencil,
+  Eraser,
+  Trophy,
+  Settings,
   ChevronDown,
   Lightbulb,
   Undo2,
@@ -27,7 +27,7 @@ const SudokuBoard: React.FC = () => {
   const [isNoteMode, setIsNoteMode] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [mistakes, setMistakes] = useState(0);
-  const [history, setHistory] = useState<{ grid: Grid; notes: NoteGrid; mistakes: number }[]>([]);
+  const [history, setHistory] = useState<{ grid: Grid; mistakes: number }[]>([]);
 
   // Initialize game
   const startNewGame = useCallback(() => {
@@ -47,10 +47,12 @@ const SudokuBoard: React.FC = () => {
   }, []);
 
   const saveHistory = () => {
+    const snapshotGrid = currentGrid.map(row => [...row]);
+    const snapshotMistakes = mistakes;
+    
     setHistory(prev => [...prev, { 
-      grid: currentGrid.map(row => [...row]), 
-      notes: notes.map(row => row.map(cell => new Set(cell))),
-      mistakes
+      grid: snapshotGrid, 
+      mistakes: snapshotMistakes
     }].slice(-20)); // Keep last 20 moves
   };
 
@@ -58,7 +60,6 @@ const SudokuBoard: React.FC = () => {
     if (history.length === 0) return;
     const last = history[history.length - 1];
     setCurrentGrid(last.grid);
-    setNotes(last.notes);
     setMistakes(last.mistakes);
     setHistory(prev => prev.slice(0, -1));
   };
@@ -68,14 +69,22 @@ const SudokuBoard: React.FC = () => {
     const { row, col } = selected;
     if (puzzle[row][col] !== null) return; // Can't change initial clues
 
-    saveHistory();
+    // Only save history for grid moves, not notes
+    if (!isNoteMode) {
+      saveHistory();
+    }
 
     if (num === null) {
       // Erase
-      const newGrid = [...currentGrid];
-      newGrid[row][col] = null;
-      setCurrentGrid(newGrid);
+      if (!isNoteMode) {
+        const newGrid = [...currentGrid];
+        newGrid[row] = [...newGrid[row]];
+        newGrid[row][col] = null;
+        setCurrentGrid(newGrid);
+      }
+      
       const newNotes = [...notes];
+      newNotes[row] = [...newNotes[row]];
       newNotes[row][col] = new Set();
       setNotes(newNotes);
       return;
@@ -83,6 +92,7 @@ const SudokuBoard: React.FC = () => {
 
     if (isNoteMode) {
       const newNotes = [...notes];
+      newNotes[row] = [...newNotes[row]];
       const cellNotes = new Set(newNotes[row][col]);
       if (cellNotes.has(num)) {
         cellNotes.delete(num);
@@ -93,13 +103,15 @@ const SudokuBoard: React.FC = () => {
       setNotes(newNotes);
     } else {
       const newGrid = [...currentGrid];
+      newGrid[row] = [...newGrid[row]];
       const isErasing = newGrid[row][col] === num;
       // If same number, clear it
       newGrid[row][col] = isErasing ? null : num;
       setCurrentGrid(newGrid);
-      
+
       // Clear notes for this cell when a number is placed
       const newNotes = [...notes];
+      newNotes[row] = [...newNotes[row]];
       newNotes[row][col] = new Set();
       setNotes(newNotes);
 
@@ -155,9 +167,9 @@ const SudokuBoard: React.FC = () => {
       "relative flex items-center justify-center w-full aspect-square text-2xl font-medium transition-all duration-200 cursor-pointer select-none border-r border-b border-slate-200",
       c % 3 === 2 && c !== 8 && "border-r-2 border-r-slate-400",
       r % 3 === 2 && r !== 8 && "border-b-2 border-b-slate-400",
-      isSelected ? "bg-indigo-500 text-white z-10 scale-105 shadow-lg rounded-sm" : 
-      isSameNum ? "bg-indigo-100" :
-      isRelated ? "bg-indigo-50/50" : "bg-white hover:bg-slate-50",
+      isSelected ? "bg-indigo-500 text-white z-10 scale-105 shadow-lg rounded-sm" :
+        isSameNum ? "bg-indigo-100" :
+          isRelated ? "bg-indigo-50/50" : "bg-white hover:bg-slate-50",
       isInitial ? "font-bold text-slate-800" : "text-indigo-600",
       isError && !isSelected && "text-rose-500 bg-rose-50",
       isComplete && "bg-emerald-50 text-emerald-600"
@@ -168,7 +180,7 @@ const SudokuBoard: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-4 font-sans">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200"
@@ -184,7 +196,7 @@ const SudokuBoard: React.FC = () => {
               </div>
             </div>
           </div>
-          <button 
+          <button
             onClick={() => startNewGame()}
             className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-colors"
             title="New Game"
@@ -198,7 +210,7 @@ const SudokuBoard: React.FC = () => {
           <div className="grid grid-cols-9 border-2 border-slate-400 rounded-lg overflow-hidden shadow-inner bg-slate-200">
             {currentGrid.map((row, r) => (
               row.map((val, c) => (
-                <div 
+                <div
                   key={`${r}-${c}`}
                   className={getCellClasses(r, c)}
                   onClick={() => setSelected({ row: r, col: c })}
@@ -253,15 +265,15 @@ const SudokuBoard: React.FC = () => {
               onClick={() => setIsNoteMode(!isNoteMode)}
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all active:scale-95 shadow-sm border",
-                isNoteMode 
-                  ? "bg-indigo-600 text-white border-indigo-600" 
+                isNoteMode
+                  ? "bg-indigo-600 text-white border-indigo-600"
                   : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
               )}
             >
               <Pencil size={18} />
               <span>Notes {isNoteMode ? 'ON' : 'OFF'}</span>
             </button>
-            
+
             <div className="flex gap-2">
               <button
                 onClick={undo}
