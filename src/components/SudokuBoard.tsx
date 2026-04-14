@@ -6,14 +6,10 @@ import {
   Eraser,
   Trophy,
   Settings,
-  ChevronDown,
-  Lightbulb,
-  Undo2,
-  Trash2,
-  XCircle
+  ChevronDown
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { generatePuzzle, Grid, isBoardComplete } from '@/src/lib/sudoku';
+import { Grid } from '@/src/lib/sudoku';
 
 type CellPos = { row: number; col: number } | null;
 type NoteGrid = Set<number>[][];
@@ -26,53 +22,46 @@ const SudokuBoard: React.FC = () => {
   const [selected, setSelected] = useState<CellPos>(null);
   const [isNoteMode, setIsNoteMode] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-  const [mistakes, setMistakes] = useState(0);
-  const [history, setHistory] = useState<{ grid: Grid; mistakes: number }[]>([]);
+  const [startTime, setStartTime] = useState(Date.now());
+  const [penaltySeconds, setPenaltySeconds] = useState(0);
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  const [penaltyTrigger, setPenaltyTrigger] = useState<number | null>(null);
 
   // Initialize game
-  const startNewGame = useCallback(() => {
-    const { puzzle: p, solution: s } = generatePuzzle();
+  const startNewGame = useCallback(async () => {
+    const res = await fetch('/api/puzzle');
+    const { puzzle: p, solution: s } = await res.json();
     setPuzzle(p);
     setSolution(s);
-    setCurrentGrid(p.map(row => [...row]));
+    setCurrentGrid(p.map((row: (number | null)[]) => [...row]));
     setNotes(Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => new Set<number>())));
     setSelected(null);
     setIsComplete(false);
-    setMistakes(0);
-    setHistory([]);
+    setStartTime(Date.now());
+    setPenaltySeconds(0);
+    setTimeElapsed(0);
+    setPenaltyTrigger(null);
   }, []);
 
   useEffect(() => {
     startNewGame();
-  }, []);
+  }, [startNewGame]);
 
-  const saveHistory = () => {
-    const snapshotGrid = currentGrid.map(row => [...row]);
-    const snapshotMistakes = mistakes;
-    
-    setHistory(prev => [...prev, { 
-      grid: snapshotGrid, 
-      mistakes: snapshotMistakes
-    }].slice(-20)); // Keep last 20 moves
-  };
+  useEffect(() => {
+    if (isComplete) return;
 
-  const undo = () => {
-    if (history.length === 0) return;
-    const last = history[history.length - 1];
-    setCurrentGrid(last.grid);
-    setMistakes(last.mistakes);
-    setHistory(prev => prev.slice(0, -1));
-  };
+    const intervalId = setInterval(() => {
+      setTimeElapsed(Math.floor((Date.now() - startTime) / 1000) + penaltySeconds);
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [isComplete, startTime, penaltySeconds]);
+
 
   const handleInput = useCallback((num: number | null) => {
-    if (!selected || isComplete || mistakes >= 3) return;
+    if (!selected || isComplete) return;
     const { row, col } = selected;
     if (puzzle[row][col] !== null) return; // Can't change initial clues
-
-    // Only save history for grid moves, not notes
-    if (!isNoteMode) {
-      saveHistory();
-    }
 
     if (num === null) {
       // Erase
@@ -117,18 +106,25 @@ const SudokuBoard: React.FC = () => {
 
       // Check if mistake
       if (!isErasing && num !== null && num !== solution[row][col]) {
-        setMistakes(prev => prev + 1);
-      } else if (isBoardComplete(newGrid, solution)) {
+        setPenaltySeconds(prev => prev + 30);
+        setPenaltyTrigger(Date.now());
+      } else if (!isErasing) {
         // Check if complete
-        setIsComplete(true);
+        fetch('/api/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ board: newGrid, solution }),
+        })
+          .then(res => res.json())
+          .then(({ success }) => { if (success) setIsComplete(true); });
       }
     }
-  }, [selected, isNoteMode, currentGrid, notes, puzzle, solution, isComplete, mistakes]);
+  }, [selected, isNoteMode, currentGrid, notes, puzzle, solution, isComplete]);
 
   // Keyboard navigation and input
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isComplete || mistakes >= 3) return;
+      if (isComplete) return;
 
       if (e.key >= '1' && e.key <= '9') {
         handleInput(parseInt(e.key));
@@ -136,8 +132,6 @@ const SudokuBoard: React.FC = () => {
         handleInput(null);
       } else if (e.key === 'n' || e.key === 'N') {
         setIsNoteMode(prev => !prev);
-      } else if (e.key === 'u' || e.key === 'U') {
-        undo();
       } else if (e.key.startsWith('Arrow')) {
         setSelected(prev => {
           if (!prev) return { row: 0, col: 0 };
@@ -189,12 +183,7 @@ const SudokuBoard: React.FC = () => {
         <div className="p-6 pb-2 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Zen Sudoku</h1>
-            <div className="flex items-center gap-4 mt-1">
-              <div className="flex items-center gap-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Mistakes:</span>
-                <span className="text-xs font-bold text-rose-500">{mistakes}/3</span>
-              </div>
-            </div>
+
           </div>
           <button
             onClick={() => startNewGame()}
@@ -274,26 +263,26 @@ const SudokuBoard: React.FC = () => {
               <span>Notes {isNoteMode ? 'ON' : 'OFF'}</span>
             </button>
 
-            <div className="flex gap-2">
-              <button
-                onClick={undo}
-                disabled={history.length === 0}
-                className="p-3 bg-white text-slate-600 border border-slate-200 rounded-2xl hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 shadow-sm"
-              >
-                <Undo2 size={20} />
-              </button>
-              <button
-                onClick={() => {
-                  if (selected && puzzle[selected.row][selected.col] === null) {
-                    const newGrid = [...currentGrid];
-                    newGrid[selected.row][selected.col] = solution[selected.row][selected.col];
-                    setCurrentGrid(newGrid);
-                  }
-                }}
-                className="p-3 bg-white text-slate-600 border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 shadow-sm"
-              >
-                <Lightbulb size={20} />
-              </button>
+            <div className="relative flex-1 flex items-center justify-center py-3 rounded-2xl bg-white border border-slate-200 shadow-sm">
+              <span className="text-lg font-bold text-slate-700 tracking-widest font-mono">
+                {String(Math.floor(timeElapsed / 60)).padStart(2, '0')}:
+                {String(timeElapsed % 60).padStart(2, '0')}
+              </span>
+              <AnimatePresence>
+                {penaltyTrigger && (
+                  <motion.div
+                    key={penaltyTrigger}
+                    initial={{ opacity: 0, y: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, y: -40, scale: 1.2 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    onAnimationComplete={() => setPenaltyTrigger(null)}
+                    className="absolute text-rose-500 font-bold"
+                  >
+                    +30s
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>
@@ -317,7 +306,11 @@ const SudokuBoard: React.FC = () => {
                 <Trophy size={40} />
               </div>
               <h2 className="text-3xl font-bold text-slate-900 mb-2">Well Done!</h2>
-              <p className="text-slate-500 mb-8">You've successfully completed the puzzle.</p>
+              <p className="text-slate-500 mb-2">You've successfully completed the puzzle.</p>
+              <div className="text-4xl font-bold text-indigo-600 mb-8 font-mono tracking-widest">
+                {String(Math.floor(timeElapsed / 60)).padStart(2, '0')}:
+                {String(timeElapsed % 60).padStart(2, '0')}
+              </div>
               <button
                 onClick={() => startNewGame()}
                 className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg hover:bg-indigo-700 active:scale-95 transition-all shadow-lg shadow-indigo-200"
@@ -329,35 +322,7 @@ const SudokuBoard: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Game Over Modal */}
-      <AnimatePresence>
-        {mistakes >= 3 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-rose-900/40 backdrop-blur-sm p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
-            >
-              <div className="w-20 h-20 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <XCircle size={40} />
-              </div>
-              <h2 className="text-3xl font-bold text-slate-900 mb-2">Game Over</h2>
-              <p className="text-slate-500 mb-8">You made 3 mistakes. Better luck next time!</p>
-              <button
-                onClick={() => startNewGame()}
-                className="w-full py-4 bg-rose-600 text-white rounded-2xl font-bold text-lg hover:bg-rose-700 active:scale-95 transition-all shadow-lg shadow-rose-200"
-              >
-                Try Again
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
 
       {/* Footer Info */}
       <div className="mt-8 text-slate-400 text-sm flex items-center gap-6">

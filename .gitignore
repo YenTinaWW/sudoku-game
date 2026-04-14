@@ -28,7 +28,11 @@ dist-ssr/
 .env.*
 !.env.example
 
+# Wrangler
+.wrangler/
+
 # Agents/AI
 .agent/
 .gemini/
+.claude/
 openspec/
