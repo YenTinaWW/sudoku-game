@@ -2,19 +2,29 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# Zen Sudoku (Time Attack Mode)
 
-This contains everything you need to run your app locally.
+A modern, fast-paced "Time Attack" Sudoku built with React, Vite, and Cloudflare Pages Functions (for puzzle generation and validation API).
 
-View your app in AI Studio: https://ai.studio/apps/1b1b49c6-0864-4094-867b-0605021491ca
+## How to Run Locally
 
-## Run Locally
+**Prerequisites:** Node.js (v20+ recommended)
 
-**Prerequisites:**  Node.js
+### 1. Install Dependencies
+```bash
+npm install
+```
 
+### 2. Environment Variables
+Ensure you have a `.env.local` file in the root directory.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 3. Start Development Server (Full Stack)
+Since this app relies on Cloudflare Functions in the `functions/` directory as its backend API, you **must use Wrangler** instead of pure Vite to start the server. This command will simultaneously spin up the Cloudflare API backend and route the Vite React frontend with Hot-Module-Replacement (HMR) seamlessly!
+
+Run the following command:
+```bash
+npx wrangler pages dev -- npm run dev
+```
+
+### 4. Play
+Wrangler will boot up and provide a local URL (typically `http://localhost:8788`). Open this URL in your web browser to enjoy the game!

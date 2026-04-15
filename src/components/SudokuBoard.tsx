@@ -91,33 +91,44 @@ const SudokuBoard: React.FC = () => {
       newNotes[row][col] = cellNotes;
       setNotes(newNotes);
     } else {
-      const newGrid = [...currentGrid];
-      newGrid[row] = [...newGrid[row]];
-      const isErasing = newGrid[row][col] === num;
-      // If same number, clear it
-      newGrid[row][col] = isErasing ? null : num;
-      setCurrentGrid(newGrid);
+      const newNotes = notes.map((r, ri) => r.map((cell, ci) =>
+        ri === row && ci === col ? new Set<number>() : cell
+      ));
 
-      // Clear notes for this cell when a number is placed
-      const newNotes = [...notes];
-      newNotes[row] = [...newNotes[row]];
-      newNotes[row][col] = new Set();
-      setNotes(newNotes);
 
-      // Check if mistake
-      if (!isErasing && num !== null && num !== solution[row][col]) {
-        setPenaltySeconds(prev => prev + 30);
-        setPenaltyTrigger(Date.now());
-      } else if (!isErasing) {
-        // Check if complete
-        fetch('/api/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ board: newGrid, solution }),
-        })
-          .then(res => res.json())
-          .then(({ success }) => { if (success) setIsComplete(true); });
+      // If same number clicked again, erase it (toggle off)
+      if (currentGrid[row][col] === num) {
+        const newGrid = currentGrid.map((r, ri) => r.map((v, ci) =>
+          ri === row && ci === col ? null : v
+        ));
+        setCurrentGrid(newGrid);
+        setNotes(newNotes);
+        return;
       }
+
+      // Call /api/verify — backend decides if move is correct and if game is finished
+      fetch('/api/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ row, col, val: num, currentGrid, solution }),
+      })
+        .then(res => res.json())
+        .then(({ valid, finish }: { valid: boolean; finish: boolean }) => {
+          // Always commit the number to the grid (wrong moves show in red)
+          const newGrid = currentGrid.map((r, ri) => r.map((v, ci) =>
+            ri === row && ci === col ? num : v
+          ));
+          setCurrentGrid(newGrid);
+          setNotes(newNotes);
+
+          if (valid) {
+            if (finish) setIsComplete(true);
+          } else {
+            // Wrong move: show in red + time penalty
+            setPenaltySeconds(prev => prev + 30);
+            setPenaltyTrigger(Date.now());
+          }
+        });
     }
   }, [selected, isNoteMode, currentGrid, notes, puzzle, solution, isComplete]);
 
