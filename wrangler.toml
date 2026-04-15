@@ -1,0 +1,7 @@
+name = "sudoku-game"
+compatibility_date = "2024-03-20"
+pages_build_output_dir = "dist"
+
+[[kv_namespaces]]
+binding = "SUDOKU_SOLUTIONS"
+id = "c8fdd2b6357e4f3aae73fcae52950e21"

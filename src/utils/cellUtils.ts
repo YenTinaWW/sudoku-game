@@ -12,7 +12,7 @@ export interface CellClassArgs {
   selected: CellPos;
   puzzle: Grid;
   currentGrid: Grid;
-  solution: Grid;
+  errorCells: Set<string>;
   isComplete: boolean;
 }
 
@@ -25,12 +25,12 @@ export interface CellClassArgs {
  * @param {CellPos} args.selected - The currently selected cell (null if none).
  * @param {Grid} args.puzzle - The original puzzle grid (identifies locked/pre-filled cells).
  * @param {Grid} args.currentGrid - The player's current board state.
- * @param {Grid} args.solution - The correct solution (used for error detection).
+ * @param {Set<string>} args.errorCells - Cells that have been identified as incorrect.
  * @param {boolean} args.isComplete - Whether the puzzle has been solved.
  * @returns {string} A merged Tailwind className string reflecting the cell's visual state.
  */
 export function getCellClasses({
-  r, c, selected, puzzle, currentGrid, solution, isComplete,
+  r, c, selected, puzzle, currentGrid, errorCells, isComplete,
 }: CellClassArgs): string {
   const isSelected = selected?.row === r && selected?.col === c;
   const isInitial = puzzle[r][c] !== null;
@@ -43,7 +43,7 @@ export function getCellClasses({
       selected.col === c ||
       (Math.floor(selected.row / 3) === Math.floor(r / 3) &&
         Math.floor(selected.col / 3) === Math.floor(c / 3)));
-  const isError = value !== null && value !== solution[r][c];
+  const isError = errorCells.has(`${r}-${c}`);
 
   return cn(
     'relative flex items-center justify-center w-full aspect-square text-2xl font-medium transition-all duration-200 cursor-pointer select-none border-r border-b border-slate-200',

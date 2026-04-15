@@ -15,7 +15,7 @@ export interface VerifyRequest {
   col: number;
   val: number;
   currentGrid: Grid;
-  solution: Grid;
+  puzzleId: string;
 }
 
 export interface VerifyResponse {

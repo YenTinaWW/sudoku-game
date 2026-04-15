@@ -10,9 +10,10 @@ import { fetchPuzzle, verifyMove } from '@/src/services/sudokuApi';
 export interface SudokuGameState {
   // Board data
   puzzle: Grid;
-  solution: Grid;
+  puzzleId: string;
   currentGrid: Grid;
   notes: NoteGrid;
+  errorCells: Set<string>;
 
   // Interaction state
   selected: CellPos;
@@ -41,9 +42,10 @@ export interface SudokuGameState {
 export function useSudokuGame(): SudokuGameState {
   // 1. State declarations
   const [puzzle, setPuzzle] = useState<Grid>([]);
-  const [solution, setSolution] = useState<Grid>([]);
+  const [puzzleId, setPuzzleId] = useState<string>('');
   const [currentGrid, setCurrentGrid] = useState<Grid>([]);
   const [notes, setNotes] = useState<NoteGrid>([]);
+  const [errorCells, setErrorCells] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<CellPos>(null);
   const [isNoteMode, setIsNoteMode] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
@@ -54,13 +56,14 @@ export function useSudokuGame(): SudokuGameState {
 
   // 2. Fetch a new puzzle and reset all state
   const startNewGame = useCallback(async () => {
-    const { puzzle: p, solution: s } = await fetchPuzzle();
+    const { puzzle: p, puzzleId: pid } = await fetchPuzzle();
     setPuzzle(p);
-    setSolution(s);
+    setPuzzleId(pid);
     setCurrentGrid(p.map((row: (number | null)[]) => [...row]));
     setNotes(Array.from({ length: 9 }, () =>
       Array.from({ length: 9 }, () => new Set<number>())
     ));
+    setErrorCells(new Set());
     setSelected(null);
     setIsComplete(false);
     setStartTime(Date.now());
@@ -95,6 +98,12 @@ export function useSudokuGame(): SudokuGameState {
         newGrid[row] = [...newGrid[row]];
         newGrid[row][col] = null;
         setCurrentGrid(newGrid);
+        
+        setErrorCells(prev => {
+          const next = new Set(prev);
+          next.delete(`${row}-${col}`);
+          return next;
+        });
       }
       const newNotes = [...notes];
       newNotes[row] = [...newNotes[row]];
@@ -122,25 +131,41 @@ export function useSudokuGame(): SudokuGameState {
         );
         setCurrentGrid(newGrid);
         setNotes(newNotes);
+        setErrorCells(prev => {
+          const next = new Set(prev);
+          next.delete(`${row}-${col}`);
+          return next;
+        });
         return;
       }
 
-      verifyMove({ row, col, val: num, currentGrid, solution })
+      verifyMove({ row, col, val: num, currentGrid, puzzleId })
         .then(({ valid, finish }) => {
           const newGrid = currentGrid.map((r, ri) =>
             r.map((v, ci) => (ri === row && ci === col ? num : v))
           );
           setCurrentGrid(newGrid);
           setNotes(newNotes);
+          
           if (valid) {
+            setErrorCells(prev => {
+              const next = new Set(prev);
+              next.delete(`${row}-${col}`);
+              return next;
+            });
             if (finish) setIsComplete(true);
           } else {
+            setErrorCells(prev => {
+              const next = new Set(prev);
+              next.add(`${row}-${col}`);
+              return next;
+            });
             setPenaltySeconds(prev => prev + 30);
             setPenaltyTrigger(Date.now());
           }
         });
     }
-  }, [selected, isNoteMode, currentGrid, notes, puzzle, solution, isComplete]);
+  }, [selected, isNoteMode, currentGrid, notes, puzzle, puzzleId, isComplete]);
 
   // 6. Keyboard event listener
   useEffect(() => {
@@ -169,7 +194,7 @@ export function useSudokuGame(): SudokuGameState {
   }, [handleInput, isComplete]);
 
   return {
-    puzzle, solution, currentGrid, notes,
+    puzzle, puzzleId, currentGrid, notes, errorCells,
     selected, setSelected,
     isNoteMode, setIsNoteMode,
     isComplete,

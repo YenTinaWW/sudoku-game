@@ -16,7 +16,7 @@ interface SudokuCellProps {
   selected: CellPos;
   puzzle: Grid;
   currentGrid: Grid;
-  solution: Grid;
+  errorCells: Set<string>;
   isComplete: boolean;
   onClick: () => void;
 }
@@ -32,18 +32,18 @@ interface SudokuCellProps {
  * @param {CellPos} props.selected - The currently selected cell position.
  * @param {Grid} props.puzzle - The original puzzle (locks pre-filled cells).
  * @param {Grid} props.currentGrid - The player's current board state.
- * @param {Grid} props.solution - The correct solution (used for error highlighting).
+ * @param {Set<string>} props.errorCells - Set of cells marked as incorrect.
  * @param {boolean} props.isComplete - Whether the puzzle has been solved.
  * @param {() => void} props.onClick - Callback when the cell is clicked.
  * @returns {JSX.Element} A styled, animated, clickable cell element.
  */
 export const SudokuCell: React.FC<SudokuCellProps> = ({
   r, c, value, notes,
-  selected, puzzle, currentGrid, solution, isComplete,
+  selected, puzzle, currentGrid, errorCells, isComplete,
   onClick,
 }) => (
   <div
-    className={getCellClasses({ r, c, selected, puzzle, currentGrid, solution, isComplete })}
+    className={getCellClasses({ r, c, selected, puzzle, currentGrid, errorCells, isComplete })}
     onClick={onClick}
   >
     {value !== null ? (

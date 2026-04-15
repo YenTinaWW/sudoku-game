@@ -7,7 +7,7 @@ import type { Grid, VerifyRequest, VerifyResponse } from '@/src/types/sudoku';
 
 export interface PuzzleData {
   puzzle: Grid;
-  solution: Grid;
+  puzzleId: string;
 }
 
 /**

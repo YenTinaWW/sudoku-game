@@ -22,7 +22,7 @@ import { WinModal } from './WinModal';
  */
 const SudokuBoard: React.FC = () => {
   const {
-    puzzle, solution, currentGrid, notes,
+    puzzle, currentGrid, notes, errorCells,
     selected, setSelected,
     isNoteMode, setIsNoteMode,
     isComplete,
@@ -66,7 +66,7 @@ const SudokuBoard: React.FC = () => {
                   selected={selected}
                   puzzle={puzzle}
                   currentGrid={currentGrid}
-                  solution={solution}
+                  errorCells={errorCells}
                   isComplete={isComplete}
                   onClick={() => setSelected({ row: r, col: c })}
                 />
