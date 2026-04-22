@@ -8,6 +8,7 @@ import { motion } from 'motion/react';
 import { RotateCcw, Pencil } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { useSudokuGame } from '@/src/hooks/useSudokuGame';
+
 import { SudokuCell } from './SudokuCell';
 import { NumberPad } from './NumberPad';
 import { Timer } from './Timer';
@@ -42,7 +43,7 @@ const SudokuBoard: React.FC = () => {
         {/* Header */}
         <div className="p-6 pb-2 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Zen Sudoku</h1>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Sudoku</h1>
           </div>
           <button
             onClick={startNewGame}
@@ -77,7 +78,7 @@ const SudokuBoard: React.FC = () => {
 
         {/* Controls */}
         <div className="p-6 pt-2 space-y-6">
-          <NumberPad onInput={handleInput} />
+          <NumberPad onInput={handleInput}/>
           <div className="flex items-center justify-between gap-4">
             <button
               onClick={() => setIsNoteMode(!isNoteMode)}

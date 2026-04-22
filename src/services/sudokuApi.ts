@@ -3,12 +3,7 @@
  * Communicates with Cloudflare Functions at `/api/puzzle` and `/api/verify`.
  */
 
-import type { Grid, VerifyRequest, VerifyResponse } from '@/src/types/sudoku';
-
-export interface PuzzleData {
-  puzzle: Grid;
-  puzzleId: string;
-}
+import type { Grid, VerifyRequest, VerifyResponse, PuzzleData } from '@/src/types/sudoku';
 
 /**
  * Fetches a new Sudoku puzzle and its solution from the server.

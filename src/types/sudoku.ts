@@ -22,3 +22,8 @@ export interface VerifyResponse {
   valid: boolean;
   finish: boolean;
 }
+
+export interface PuzzleData {
+  puzzle: Grid;
+  puzzleId: string;
+}
